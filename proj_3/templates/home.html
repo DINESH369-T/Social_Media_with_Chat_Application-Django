@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+    <!-- How your website looks -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Profile dropdown positioning */
+        .profile-menu {
+            position: absolute;
+            top: 40px;
+            right: 20px;
+            z-index: 1100;
+        }
+
+        /* Profile button */
+        .profile-trigger {
+            padding: 5px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+        }
+
+        .profile-trigger:hover {
+            background: #f0edff;
+        }
+
+        /* Profile circle */
+        .profile-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 23px;
+            font-weight: bold;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        /* Profile image */
+        .profile-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+            flex-shrink: 0;
+        }
+
+        /* Dropdown box */
+        .profile-dropdown {
+            width: 250px;
+            padding: 15px;
+            border: 1px solid #e5e1f5;
+            border-radius: 14px;
+            box-shadow: 0 8px 25px rgba(40, 40, 90, 0.15);
+            z-index: 1101;
+        }
+        /* Profile information section */
+        .profile-info {
+            padding: 5px 5px 15px;
+        }
+
+        .profile-heading {
+            display: block;
+            color: #4f46e5;
+            font-size: 15px;
+            margin-bottom: 13px;
+        }
+
+        /* Avatar and username alignment */
+        .profile-details {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .profile-username {
+            color: #4f46e5;
+            font-weight: 600;
+            text-decoration: none;
+            overflow-wrap: anywhere;
+        }
+
+        .profile-username:hover {
+            text-decoration: underline;
+        }
+
+        /* Dropdown options */
+        .profile-action {
+            padding: 10px;
+            border-radius: 7px;
+            color: #393653;
+            font-size: 14px;
+        }
+
+        .profile-action:hover {
+            background: #f0edff;
+            color: #5b21b6;
+        }
+
+        .logout-action {
+            color: #dc3545;
+        }
+
+        .logout-action:hover {
+            background: #fff0f0;
+            color: #dc3545;
+        }
+
+        .post-card img {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .like-btn {
+            font-size: 22px;
+            border: none;
+            background:none;
+            cursor: pointer;
+        }
+
+        .liked {
+            color: hsl(0, 98%, 50%) !important;
+        }
+
+        .comment-box {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- INBOX BUTTON (Top Right Corner) -->
+<a href="{% url 'inbox' %}" 
+   class="btn btn-outline-primary"
+   style="position:absolute; top:49px; right:100px;">
+    📩 Inbox
+</a>
+<div class="container mt-4">
+<!-- Show Messages (IMPORTANT FOR ADD-POST ERROR) -->
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <div class="alert alert-warning">{{ message }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Auto reopen modal if post failed -->
+        <script>
+            setTimeout(() => {
+                let modal = new bootstrap.Modal(document.getElementById("addPostModal"));
+                modal.show();
+            }, 500);
+        </script>
+    {% endif %}
+
+<!-- Profile Menu Dropdown -->
+<div class="profile-menu dropdown">
+    <button class="btn profile-trigger"
+            type="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false">
+
+        {% if current_user.profile_image %}
+            <img src="{{ current_user.profile_image.url }}"
+                 class="profile-img"
+                 alt="Profile">
+        {% else %}
+            <div class="profile-circle">
+                {{ current_user.username|slice:":1"|upper }}
+            </div>
+        {% endif %}
+    </button>
+
+    <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
+        <!-- Profile Information -->
+        <li class="profile-info">
+            <strong class="profile-heading">My Profile</strong>
+            <div class="profile-details">
+                {% if current_user.profile_image %}
+                    <img id="current-user-profile-img" src="{{ current_user.profile_image.url }}"
+                         class="profile-img"
+                         alt="Profile">
+                {% else %}
+                    <div class="profile-circle">
+                        {{ current_user.username|slice:":1"|upper }}
+                    </div>
+                {% endif %}
+                <a href="?view_user={{ current_user.username }}"
+                   class="profile-username">
+                    {{ current_user.username }}
+                </a>
+
+            </div>
+        </li>
+        <li>
+            <a class="dropdown-item profile-action"
+               href="#"
+               onclick="openProfileEditModal(); return false;">
+                <span>✏️</span> Edit Profile
+            </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <a class="dropdown-item profile-action logout-action"
+               href="{% url 'logout' %}">
+                <span>🚪</span> Logout
+            </a>
+        </li>
+    </ul>
+</div>
+
+    <!-- Add Post -->
+    <div class="mb-3 mt-5">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPostModal">
+            Add Post
+        </button>
+        <a class="btn btn-outline-dark" href="{% url 'home' %}">Show All Posts</a>
+    </div>
+
+    <!-- Add Post Modal -->
+    <div class="modal fade" id="addPostModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add New Post</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        {{ post_form.as_p }}
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Post</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Posts List -->
+    <div class="row mt-4">
+        <div class="col-md-8">
+
+            <h5>All Posts</h5>
+
+            {% for post in all_posts %}
+            <div class="card mb-3 p-3 post-card" id="post-{{ post.id }}">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <!-- USER Details Display-->
+                    <div class="d-flex align-items-center">
+                        {% if post.user.profile_image %}
+                            <img src="{{ post.user.profile_image.url }}" class="profile-img me-2" style="width:40px;">
+                        {% else %}
+                            <div class="profile-circle me-2" style="width:40px;height:40px;">
+                                {{ post.user.username|slice:":1"|upper }}
+                            </div>
+                        {% endif %}
+                        <a href="?view_user={{ post.user.username }}" style="text-decoration:none; color:inherit;">
+                            <strong>{{ post.user.username }}</strong>
+                        </a>
+                        
+                    </div>
+                    
+                    <!-- 💬 MESSAGE BUTTON (only for other users) -->
+                    {% if post.user.username != current_user.username %}
+                        <a href="/chat/{{ post.user.username }}/" class="btn btn-sm btn-primary ms-2">
+                            💬 Message
+                        </a>
+                    {% endif %}
+
+                    <!-- THREE DOT MENU (only for post owner) -->
+                    {% if post.user.username == current_user.username %}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light" data-bs-toggle="dropdown" aria-expanded="false">⋮</button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="openEditModal({{ post.id }}); return false;">✏ Edit</a></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deletePost({{ post.id }}); return false;">🗑 Delete</a></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+
+                </div>
+
+                <p class="mt-2" id="post-text-{{ post.id }}">{{ post.content}}</p>
+
+                {% if post.image %}
+                    <img id="post-image-{{ post.id }}" src="{{ post.image.url }}">
+                {% else %}
+                    <img id="post-image-{{ post.id }}" style="display:none;">
+                {% endif %}
+
+                <!-- Like + Comments -->
+                <div class="mt-2 d-flex gap-3">
+                    <button class="like-btn {% if post.is_liked %}liked{% endif %}" 
+                        onclick="likePost({{ post.id }}, this)"> {% if post.is_liked %}♥{% else %}♡{% endif %}
+                    </button>
+                    <span id="like-count-{{ post.id }}">{{ post.likes_count }}</span>
+
+                    <button class="btn btn-sm btn-outline-secondary" onclick="openComments({{ post.id }})">
+                        💬 Comments
+                    </button>
+                </div>
+
+                <small class="text-muted">Posted on {{ post.created_at }}</small>
+
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+
+
+<!-- EDIT POST MODAL -->
+<div class="modal fade" id="editPostModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form id="editPostForm" onsubmit="return false;">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Post</h5>
+                    <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <textarea id="edit-text" class="form-control" rows="3"></textarea>
+
+                    <label class="mt-2">Change Image (optional):</label>
+                    <input type="file" id="edit-image" class="form-control">
+
+                    <input type="hidden" id="edit-post-id">
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-success" type="button" onclick="saveEdit()">Save</button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cancel</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- Comments Modal -->
+<div class="modal fade" id="commentsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Comments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="comment-box" id="comments-list"></div>
+
+                <hr>
+
+                <textarea id="new-comment" class="form-control" placeholder="Add a comment..."></textarea>
+                <button class="btn btn-primary mt-2" id="sendCommentBtn">Post Comment</button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form id="editProfileForm" enctype="multipart/form-data" onsubmit="return false;">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Profile Image</h5>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <label class="form-label">Choose new image:</label>
+                    <input type="file" id="new-profile-image" class="form-control" accept="image/*">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" onclick="saveProfileImage()">Save</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+<!-- How your website works -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<script>
+    /* Helper to get CSRF token from cookie (if you use Django CSRF) */
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            let cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    /* ❤️ LIKE BUTTON */
+    function likePost(postId, btn) {
+        fetch(`/like/${postId}/`)
+            .then(response => response.json())
+            .then(data => {
+    document.getElementById(`like-count-${postId}`).innerText = data.count;
+
+    if (data.liked) {
+        btn.classList.add("liked");
+        btn.innerHTML = "♥";   // filled heart
+    } else {
+        btn.classList.remove("liked");
+        btn.innerHTML = "♡";   // outline heart
+    }
+})
+            .catch(() => console.log("Like request failed"));
+    }
+
+
+    /* 💬 OPEN COMMENT MODAL */
+    let currentCommentPostId = null;
+    function openComments(postId) {
+
+        fetch(`/comments/${postId}/`)
+            .then(response => response.json())
+            .then(data => {
+
+                currentCommentPostId = postId;
+
+                let list = document.getElementById("comments-list");
+                list.innerHTML = "";
+
+                if (!data.comments || data.comments.length === 0) {
+                    list.innerHTML = "<p class='text-muted'>No comments yet.</p>";
+                } else {
+                    data.comments.forEach(comment => {
+                        let p = document.createElement('p');
+                        p.innerHTML = `<strong>${escapeHtml(comment.user)}:</strong> ${escapeHtml(comment.text)}`;
+                        list.appendChild(p);
+                    });
+                }
+
+                // Show modal
+                let modal = new bootstrap.Modal(document.getElementById("commentsModal"));
+                modal.show();
+
+                // Set send button handler
+                document.getElementById("sendCommentBtn").onclick = () => addComment(postId);
+            })
+            .catch(() => alert("Failed to load comments"));
+    }
+
+    /* sanitize simple text for injection */
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+
+    /* ➕ ADD COMMENT - updates comments list in-place to avoid backdrop issues */
+    function addComment(postId) {
+
+        let textEl = document.getElementById("new-comment");
+        let text = textEl.value.trim();
+
+        if (!text) {
+            alert("Comment cannot be empty.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("text", text);
+
+        fetch(`/comment/add/${postId}/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': csrftoken},
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // append new comment to list (so modal stays open and no black backdrop issue)
+                let list = document.getElementById("comments-list");
+                // remove "no comments" placeholder if present
+                if (list.children.length === 1 && list.children[0].classList.contains('text-muted')) {
+                    list.innerHTML = '';
+                }
+                let p = document.createElement('p');
+                p.innerHTML = `<strong>${escapeHtml(data.user)}:</strong> ${escapeHtml(data.text)}`;
+                list.appendChild(p);
+
+                // clear input
+                textEl.value = "";
+            } else {
+                alert(data.error || "Something went wrong");
+            }
+        })
+        .catch(() => alert("Server error"));
+    }
+
+
+    /* ------------------ OPEN EDIT MODAL ------------------ */
+    function openEditModal(postId) {
+
+        let text = document.getElementById("post-text-" + postId).innerText;
+
+        document.getElementById("edit-post-id").value = postId;
+        document.getElementById("edit-text").value = text;
+        document.getElementById("edit-image").value = "";
+
+        new bootstrap.Modal(document.getElementById("editPostModal")).show();
+    }
+
+    /* ------------------ SAVE EDIT ------------------ */
+    function saveEdit() {
+        let postId = document.getElementById("edit-post-id").value;
+        let text = document.getElementById("edit-text").value;
+        let image = document.getElementById("edit-image").files[0];
+
+        if (!postId) return;
+
+        let formData = new FormData();
+        formData.append("text", text);
+        if (image) formData.append("image", image);
+
+        fetch(`/post/edit/${postId}/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': csrftoken},
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+
+                // update text
+                document.getElementById("post-text-" + postId).innerText = data.text || text;
+
+                // update image if returned
+                if (data.image_url) {
+                    let img = document.getElementById("post-image-" + postId);
+                    if (img) {
+                        img.src = data.image_url;
+                        img.style.display = "block";
+                    }
+                }
+
+                // hide edit modal safely
+                const editModalEl = document.getElementById("editPostModal");
+                const editModalInstance = bootstrap.Modal.getInstance(editModalEl) || new bootstrap.Modal(editModalEl);
+                editModalInstance.hide();
+
+            } else {
+                alert(data.error || "Unable to save edit");
+            }
+        })
+        .catch(() => alert("Server error"));
+    }
+
+    /* DELETE POST */
+    function deletePost(postId) {
+        if (!confirm("Delete this post?")) return;
+
+        fetch(`/post/delete/${postId}/`, {
+            method: "DELETE",
+            headers: {'X-CSRFToken': csrftoken}
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                let el = document.getElementById("post-" + postId);
+                if (el) el.remove();
+            } else {
+                alert(data.error || "Error deleting post");
+            }
+        })
+        .catch(() => alert("Server error"));
+    }
+
+    function openProfileEditModal() {
+    new bootstrap.Modal(document.getElementById("editProfileModal")).show();
+}
+
+function saveProfileImage() {
+    let file = document.getElementById("new-profile-image").files[0];
+
+    if (!file) {
+        alert("Please choose an image.");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("profile_image", file);
+
+    fetch("/edit-profile/", {   // FIXED URL
+        method: "POST",
+        headers: { "X-CSRFToken": csrftoken },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+
+            // update only current user's profile picture
+            document.getElementById("current-user-profile-img").src = data.image_url + "?t=" + Date.now();
+
+            bootstrap.Modal.getInstance(
+                document.getElementById("editProfileModal")
+            ).hide();
+        } else {
+            alert(data.error);
+        }
+    })
+    .catch(() => alert("Server error"));
+}
+
+
+</script>
+
+</body>
+</html>
